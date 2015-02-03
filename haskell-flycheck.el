@@ -20,12 +20,6 @@
 (require 'haskell-process)
 (require 'flycheck)
 
-(flycheck-define-generic-checker 'haskell-process
-  "A syntax and type checker for Haskell using GHCi (via the
-haskell-process Emacs module)."
-  :start 'flycheck-haskell-process-start
-  :modes '(haskell-mode))
-
 (defun flycheck-haskell-process-start (checker callback)
   "Start a GHCi load with CHECKER.
 
@@ -86,5 +80,16 @@ CALLBACK is the status callback passed by Flycheck."
               (funcall (plist-get state :callback)
                        'finished
                        errors)))))))))
+
+
+(flycheck-define-generic-checker 'haskell-process
+  "A syntax and type checker for Haskell using GHCi (via the
+haskell-process Emacs module)."
+  :start 'flycheck-haskell-process-start
+  :modes '(haskell-mode)
+  :next-checkers '((warning . haskell-hlint)))
+
+;; Register as an auto-selectable checker
+(setq flycheck-checkers (cons `haskell-process flycheck-checkers))
 
 (provide 'haskell-flycheck)
