@@ -76,11 +76,12 @@ CALLBACK is the status callback passed by Flycheck."
                                 (plist-get next-error :line)
                                 (plist-get next-error :col)
                                 (plist-get next-error :type)
-                                (plist-get next-error :msg)))))
-              (with-current-buffer (plist-get state :buffer)
-                  (funcall (plist-get state :callback)
-                           'finished
-                           errors))))))))))
+                                (plist-get next-error :msg)
+                                :checker 'haskell-process
+                                :buffer (plist-get state :buffer)))))
+              (funcall (plist-get state :callback)
+                       'finished
+                       errors)))))))))
 
 
 (flycheck-define-generic-checker 'haskell-process
