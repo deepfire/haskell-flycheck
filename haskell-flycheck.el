@@ -91,7 +91,6 @@ haskell-process Emacs module)."
   :modes '(haskell-mode)
   :next-checkers '((warning . haskell-hlint)))
 
-;; Register as an auto-selectable checker
-(setq flycheck-checkers (cons `haskell-process flycheck-checkers))
+(add-to-list 'flycheck-checkers 'haskell-process) ; Register as an auto-selectable checker
 
 (provide 'haskell-flycheck)
