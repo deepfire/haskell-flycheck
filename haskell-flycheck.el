@@ -20,77 +20,75 @@
 (require 'haskell-process)
 (require 'flycheck)
 
-(defun flycheck-haskell-process-start (checker callback)
+(defun flycheck-haskell-session-start (checker callback)
   "Start a GHCi load with CHECKER.
 
 CALLBACK is the status callback passed by Flycheck."
   (let ((session (haskell-session)))
     (haskell-session-current-dir session)
-    (let ((process (haskell-process)))
-      (haskell-process-queue-command
-       process
-       (make-haskell-command
-        :state
-        (list :process process
-              :session session
-              :filename (buffer-file-name)
-              :callback callback
-              :buffer (current-buffer)
-              :original (buffer-string))
-        :go
-        (lambda (state)
-          (with-current-buffer (plist-get state :buffer)
-            (let* ((filename (plist-get state :filename)))
-              (write-region (point-min) (point-max) filename)
-              (clear-visited-file-modtime)
-              (haskell-process-send-string
-               (plist-get state :process)
-               (format ":load \"%s\""
-                       (replace-regexp-in-string
-                        "\""
-                        "\\\\\""
-                        filename))))))
-        :live (lambda (state _)
-                (when (plist-get state :original)
-                  (with-temp-buffer
-                    (insert (plist-get state :original))
-                    (write-region (point-min) (point-max) (plist-get state :filename))
-                    (plist-put state :original nil))))
-        :complete
-        (lambda (state response)
-          (let ((session (plist-get state :session))
-                (process (plist-get state :process)))
-            (haskell-process-set-response-cursor process 0)
-            (let ((errors (list))
-                  (next-error t))
-              (while next-error
-                (setq next-error
-                      (haskell-process-errors-warnings
-                       session
-                       process
-                       response
-                       t))
-                (when (consp next-error)
-                  (add-to-list 'errors
-                               (flycheck-error-new-at
-                                (plist-get next-error :line)
-                                (plist-get next-error :col)
-                                (plist-get next-error :type)
-                                (plist-get next-error :msg)
-                                :checker 'haskell-process
-                                :buffer (plist-get state :buffer)))))
-              (funcall (plist-get state :callback)
-                       'finished
-                       errors)))))))))
+    (haskell-session-queue-command
+     session
+     (make-haskell-command
+      :state
+      (list :process session
+	    :session session
+	    :filename (buffer-file-name)
+	    :callback callback
+	    :buffer (current-buffer)
+	    :original (buffer-string))
+      :go
+      (lambda (state)
+	(with-current-buffer (plist-get state :buffer)
+	  (let* ((filename (plist-get state :filename)))
+	    (write-region (point-min) (point-max) filename)
+	    (clear-visited-file-modtime)
+	    (haskell-session-send-string
+	     (plist-get state :session)
+	     (format ":load \"%s\""
+		     (replace-regexp-in-string
+		      "\""
+		      "\\\\\""
+		      filename))))))
+      :live (lambda (state _)
+	      (when (plist-get state :original)
+		(with-temp-buffer
+		  (insert (plist-get state :original))
+		  (write-region (point-min) (point-max) (plist-get state :filename))
+		  (plist-put state :original nil))))
+      :complete
+      (lambda (state response)
+	(let ((session (plist-get state :session)))
+	  (haskell-session-set-response-cursor session 0)
+	  (let ((errors (list))
+		(next-error t))
+	    (while next-error
+	      (setq next-error
+		    (haskell-session-errors-warnings
+		     session
+		     session
+		     response
+		     t))
+	      (when (consp next-error)
+		(add-to-list 'errors
+			     (flycheck-error-new-at
+			      (plist-get next-error :line)
+			      (plist-get next-error :col)
+			      (plist-get next-error :type)
+			      (plist-get next-error :msg)
+			      :checker 'haskell-process
+			      :buffer (plist-get state :buffer)))))
+	    (funcall (plist-get state :callback)
+		     'finished
+		     errors))))))))
 
 
 (flycheck-define-generic-checker 'haskell-process
   "A syntax and type checker for Haskell using GHCi (via the
 haskell-process Emacs module)."
-  :start 'flycheck-haskell-process-start
+  :start 'flycheck-haskell-session-start
   :modes '(haskell-mode)
   :next-checkers '((warning . haskell-hlint)))
 
-(add-to-list 'flycheck-checkers 'haskell-process) ; Register as an auto-selectable checker
+(add-to-list 'flycheck-checkers 'haskell-session) ; Register as an auto-selectable checker
 
 (provide 'haskell-flycheck)
